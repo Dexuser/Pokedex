@@ -9,8 +9,8 @@ class Styles:
 	def __init__(self):
 		# Fuentes
 		self.fuente_titulo = font.Font(size=50, name="titular")
-		self.fuente_datos = font.Font(size=13, name="datos")
 		self.fuente_subtitulo = font.Font(size=25, name="subtitulo")
+		self.fuente_datos = font.Font(size=13, name="datos")
 
 		
 		self.titulo = ttk.Style()

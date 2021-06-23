@@ -3,18 +3,24 @@ from tkinter import ttk
 from tkinter import messagebox as mb
 from tkinter import filedialog as fd
 from tkinter import scrolledtext as st
-from shutil import move
-
+import os
+from shutil import copy
 import Database
 
 class Encuesta:
 
+	# Importamos y creamos un objeto de la database par apoder interactuar con ella
+	# tanto el tope viene siendo la presentacion y la explicacion de como usar la interfaz
+	# de entradas de datos, el cuerpo, imagenes, y opciones son funciones cuyo unico proposito
+	# es construir la interfaz grafica para la entrada de datos
 	def __init__(self, root):
 		self.dialogo = tk.Toplevel(root)
 		self.database = Database.Pokemons()
 		self.presentacion()
 		self.cuerpo()
 		self.recuperar_imagen()
+		self.opciones()
+		self.dialogo.bind_all("<Control-e>", self.atajos)
 		self.dialogo.grab_set()
 
 	def presentacion(self):
@@ -25,18 +31,19 @@ class Encuesta:
 			font="subtitulo"
 		)
 		self.titulo.grid(column=0, row=0, padx=5, pady=5)
-		parrafo = "Por favor, introduzca todos los datos pedidos del pokemon en el formulario de abajo\n\
-en la zona que dice archivo busque la imagen del pokemon.\n\
-Nota: La imagen que eligio sera movida a la carpeta imagenes de la pokedex\n\
-(tenga en cuenta que la ruta que se le mostrara es la ruta despues de haber\n\
-luego de haber movido el archivo)"
+
+
+		parrafo = "Introduzca los datos e imagen del pokemon (la imagen sera movida a una capeta de la Pokedex) en\n\
+cambio si va a modificar la informacion de algun pokemon, primero introduzca el numero del pokemon \n\
+y luego introduzca los nuevos datos que quiere que posea el pokemon.\n\
+(Las entradas que queden vacias no alteraran la informacion ya contenida del pokemon)"
+
 		self.parrafo = ttk.Label(
 			self.dialogo,
 			text=parrafo,
-			font="subtitulos",
+			font="datos"
 		)
 		self.parrafo.grid(column=0, row=1, padx=5, pady=5)
-
 
 
 	def cuerpo(self):
@@ -164,17 +171,26 @@ luego de haber movido el archivo)"
 			command=self.buscar_mover
 			)
 		self.btn_dialogo.grid(column=2, row=0, padx=5, pady=5)
-		self.boton = ttk.Button(self.dialogo, text="Guardar", command=self.guardar)
-		self.boton.grid(column=0, row=5, padx=5, pady=5)
-	
+
+	# hacer una copia de la imagen selecciona y introducirla en la carpeta imagenes, luego crea una
+	# ruta relativa (desde el modulo Formulario hasta la carpeta imagenes hasta la imagen ejemp: imagenes/archivo.png)
 	def buscar_mover(self):
 		nombrearch=fd.askopenfilename(initialdir = "/",title = "Seleccione archivo",filetypes = (("archivos png", "*.png"),("todos los archivos","*.*")))
 		if nombrearch != "":
-			move(nombrearch, r"./imagenes/")
-			self.ruta.set("./imagenes/" + os.path.basename(nombrearch))
+			copy(nombrearch, r"imagenes/")
+			self.ruta.set("imagenes/" + os.path.basename(nombrearch))
 
 
+	def opciones(self):
+		self.boton = ttk.Button(self.dialogo, text="Guardar", command=self.guardar)
+		self.boton.grid(column=0, row=5, padx=5, pady=5)
+		self.btn_modificar = ttk.Button(self.dialogo, text="Modificar", command=self.modificar)
+		self.btn_modificar.grid(column=0, row=6, padx=5, pady=5)
 
+
+	# Luego de que todas las entradas de datos estan llenas se proceden a guardar la informacion
+	# en la base de datos utiliziando un metodo del objeto data base anteriormente creado.
+	# Nota, la base de datos no guarda la imagen, sino que guarda la ruta relativa de esta
 	def guardar(self):
 		datos = (
 			self.numero.get(),
@@ -197,3 +213,25 @@ luego de haber movido el archivo)"
 		self.tipos.set("")
 		self.comida.set("")
 		self.ruta.set("")
+		self.texto.delete(1.0, tk.END)
+
+	# en modificar, se crea una tupla de datos, pero esta es ordenada de manera que 
+	# cuando esta llegue ala base de datos se pueda identificar la informacion del pokemon
+	# se va a modificar usando su numero de identificacion
+	def modificar(self):
+		datos = (
+		self.pokemon.get(),
+		self.nombre.get(),
+		self.altura.get(),
+		self.peso.get(),
+		self.tipos.get(),
+		self.comida.get(),
+		self.ruta.get(),
+		self.texto.get(1.0, tk.END),
+		self.numero.get()
+		)
+		respuesta = self.database.editar(datos)
+		if respuesta > 0:
+			mb.showinfo("Informacion", "Los datos del Pokemon fueron actualizados!")
+		else:
+			mb.showerror("Error!", "No existe ningun pokemon con ese numero")

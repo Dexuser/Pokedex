@@ -1,15 +1,25 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import scrolledtext as st
-from os import mkdir
-from tkinter.constants import ANCHOR
+from tkinter import messagebox as mb
+from os import mkdir, remove
 import Pokedex_styles
 import Formulario
 import Database
 
 
 class Pokedex:
+	# por favor, mete los scripts en una carpeta para que funcionen
+	# debido a que fueron creados con la intencion de que esten en una carpeta
+	# Arriba se importan los modulos Pokedex_Styles donde se declaran los estilos que usaran
+	# los widgets que mas tarde seran incializados, Formulario con este modulo se crea un objeto
+	# que nos permitira hacer un toplevel con las herramientas necesarias para poder introducir informacion	
+	# ala base de datos, y el modulo Database, con el creamos un objeto que nos permite interactuar con una base
+	# de datos SQLite
 
+	# Se creara una carpeta para contener las imagenes
+	# aparte se crean la ventana, y se crean los Objetos para interactuar
+	# con la base de datos y el formulario
 	def __init__(self):
 		try:
 			mkdir("imagenes")
@@ -17,14 +27,20 @@ class Pokedex:
 			pass
 
 		self.root = tk.Tk()
-		self.root.geometry("1130x650")
-		self.root.title("Pokedex, Version beta 1")
+		self.root.geometry("1400x650")
+		self.root.title("Pokedex, Version beta 2")
+		self.root.iconbitmap("imagenes/Pokeball.ico")
 		self.styles = Pokedex_styles.Styles()
 		self.database = Database.Pokemons()
 		self.tope()
 		self.cuerpo()
+		self.root.bind_all("<Control-n>", self.atajos)
+		self.root.bind_all("<Control-d>", self.atajos)
 		self.root.mainloop()
 	
+	#Los botones son los principales detonantes de acciones en la pokedex
+	# Estos muestran los pokemones contenidos y permiten agregar, modificar
+	# y eliminar pokemones
 	def tope(self):
 		self.titulo = ttk.Label(
 			self.root,
@@ -34,11 +50,10 @@ class Pokedex:
 			)
 		self.titulo.grid(column=0, row=0, padx=50, pady=5)
 
-		# Agregar el Command
+
 		self.retroceder = ttk.Button(
 			self.root, 
 			text="Retroceder", 
-			width=15,
 			command=lambda: self.moverse(-1)
 		)
 		self.retroceder.grid(column=1, row=0, padx=5, pady=5, sticky="ens")
@@ -46,28 +61,36 @@ class Pokedex:
 		self.avanzar = ttk.Button(
 			self.root, 
 			text="Avanzar", 
-			width=15,
 			command=lambda: self.moverse(1)
 		)
 		self.avanzar.grid(column=2, row=0, padx=5, pady=5, sticky="ens")
 
-		self.agregar = ttk.Button(
+		self.agregar_modificar = ttk.Button(
 			self.root, 
-			text="Agregar pokemon",
-			command= self.encuesta
+			text="Agregar/Modificar\n pokemones\n atajo: Control N",
+			command= self.encuesta,
 			)
-		self.agregar.grid(
-			column=3, row=0, 
-			padx=5, pady=5, 
-			sticky="ens",
+		self.agregar_modificar.grid(column=3, row=0, padx=5, pady=5, sticky="ens")
+		
+		self.eliminar = ttk.Button(
+			self.root, 
+			text="Eliminar Pokemon\n atajo: Control D", 
+			command=self.borrar
 			)
+		self.eliminar.grid(column=4, row=0, padx=4, pady=5, sticky="ens" )
+
 		barra= ttk.Separator(orient=tk.HORIZONTAL)
 		barra.grid(column=0, row=1,columnspan=4, sticky="we")
 
 
+
+	# el cuerpo consiste en la interfaz grafica para poder visualizar la informacion
+	# contenida en la base de datos de nuestros pokemones, el flujo de informacion aqui consiste
+	# en llamar ala funcion moverse y lo que retorne introducirlas en cada una de los stringsvar de 
+	# forma ordenada, aparte se crea un canvas para poder visualizar las imagenes de los pokemones
 	def cuerpo(self):
-		self.imagen = tk.Canvas(self.root, width=300, height=500, background="black")
-		self.archivo = tk.PhotoImage()
+		self.imagen = tk.Canvas(self.root, width=500, height=500, background="black")
+		self.archivo = tk.PhotoImage(file="imagenes/default.png")
 		self.imagen.create_image(0, 0, image=self.archivo, anchor="nw")
 		self.imagen.grid(column=0, row=2, padx=5, pady=5)
 
@@ -188,9 +211,17 @@ class Pokedex:
 		self.texto = st.ScrolledText(self.labelframe, width=60, height=6)
 		self.texto.grid(column=0, row=0, padx=5, pady=5, sticky="we")
 	
+
+	# la funcion encuesta es llamada por el boton de Agregar/modificar
+	# pokemones, se crea un toplevel para la entrada y modificacion de datos
 	def encuesta(self):
 		self.toplevel = Formulario.Encuesta(self.root)
 
+
+	# La funcion moverse es llamada por los botones retroceder y avanzar.
+	# esta recibe un parametro llamado direccion que recibe 2 numeors,
+	# el 1 le indica que debe avanzar ala siguiente fila de la base de datos
+	# y con el -1 debe de retroceder ala fila pasada, se utiliza el objeto database
 	def moverse(self, direccion):
 		respuesta = self.database.iterar(direccion)
 		if respuesta != None:
@@ -204,5 +235,32 @@ class Pokedex:
 			self.archivo.configure(file=respuesta[7])
 			self.texto.delete(1.0, tk.END)
 			self.texto.insert(tk.END, respuesta[8])
-
+	
+	# La funcion borrar recupera el numero numero del pokemon que se esta
+	# visualizando actualmente en la pokedexGUI y se le envia al objeto
+	# database para ejecutar un metodo que elimina toda la informacion relacionada
+	# a ese numero.
+	def borrar(self):
+		if self.numero.get() != "":
+			respuesta = self.database.borrar(self.numero.get())
+			if respuesta > 0:
+				mb.showinfo("informacion", "Los datos del Pokemon fueron borrados!")
+				self.numero.set("")
+				self.pokemon.set("")
+				self.nombre.set("")
+				self.altura.set("")
+				self.peso.set("")
+				self.tipos.set("")
+				self.comida.set("")
+				self.texto.delete(1.0, tk.END)
+				remove(self.archivo.cget("file"))
+				self.archivo.configure(file="imagenes/default.png")
+		else:
+			mb.showerror("Error!", "No hay nada que borrar")
+	
+	def atajos(self, event):
+		if event.keysym=="n":
+			self.encuesta()
+		if event.keysym=="d":
+			self.borrar()
 aplicacion = Pokedex()

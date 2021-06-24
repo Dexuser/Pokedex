@@ -1,3 +1,4 @@
+from os import close
 import sqlite3
 from tkinter import messagebox as mb
 
@@ -37,22 +38,29 @@ class Pokemons:
 	# guardar de modulo Formulario, esta es insertada ala base de datos apenas
 	# es recibida.
 	def subir(self,datos):
-		cone = self.abrir()
-		cursor = cone.cursor()
-		sql = """insert into pokemones(
-					numero,
-					pokemon,
-					nombre,
-					altura,
-					peso,
-					tipos,
-					comida,
-					imagenPath,
-					descripcion
-				) values (?,?,?,?,?,?,?,?,?)"""
-		cursor.execute(sql, datos)
-		cone.commit()
-		cone.close()
+		try:
+			cone = self.abrir()
+			cursor = cone.cursor()
+			sql = """insert into pokemones(
+						numero,
+						pokemon,
+						nombre,
+						altura,
+						peso,
+						tipos,
+						comida,
+						imagenPath,
+						descripcion
+					) values (?,?,?,?,?,?,?,?,?)"""
+			cursor.execute(sql, datos)
+			return cursor.rowcount
+		except sqlite3.IntegrityError:
+			mb.showinfo("Error!", "Ya existe un pokemon con ese numero de identificacion intenta otro numero")
+		finally:
+			cone.commit()
+			cone.close()
+
+
 
 	# Iterar es un metodo llamado por el metodo guardar del modulo
 	# PokedexGUI, ambos metodos reciben un parametro llamado direccion, 
@@ -110,4 +118,20 @@ class Pokemons:
 		finally:
 			cone.commit()
 			cone.close()
-			
+
+	def buscar(self, dato):
+		try:
+			cone = self.abrir()
+			cursor = cone.cursor()
+			sql = """select pokemon, 
+				nombre, 
+				altura,
+				peso,
+				tipos,
+				comida,
+				imagenPath,
+				descripcion from pokemones where numero=?"""
+			cursor.execute(sql, dato)
+			return cursor.fetchone()
+		finally:
+			cone.close()

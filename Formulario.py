@@ -5,6 +5,7 @@ from tkinter import filedialog as fd
 from tkinter import scrolledtext as st
 import os
 from shutil import copy
+from PIL import Image
 import Database
 
 class Encuesta:
@@ -21,6 +22,7 @@ class Encuesta:
 		self.recuperar_imagen()
 		self.opciones()
 		self.dialogo.bind_all("<Control-e>", self.atajos)
+		self.dialogo.bind("<Control-g>", self.atajos)
 		self.dialogo.grab_set()
 
 	def presentacion(self):
@@ -35,8 +37,7 @@ class Encuesta:
 
 		parrafo = "Introduzca los datos e imagen del pokemon (la imagen sera movida a una capeta de la Pokedex) en\n\
 cambio si va a modificar la informacion de algun pokemon, primero introduzca el numero del pokemon \n\
-y luego introduzca los nuevos datos que quiere que posea el pokemon.\n\
-(Las entradas que queden vacias no alteraran la informacion ya contenida del pokemon)"
+y luego introduzca los nuevos datos que quiere que posea el pokemon."
 
 		self.parrafo = ttk.Label(
 			self.dialogo,
@@ -172,13 +173,42 @@ y luego introduzca los nuevos datos que quiere que posea el pokemon.\n\
 			)
 		self.btn_dialogo.grid(column=2, row=0, padx=5, pady=5)
 
+
+	def atajos(self, event):
+		if event.keysym=="e":
+			self.modificar()
+		if event.keysym=="g":
+			self.guardar()
+
+
 	# hacer una copia de la imagen selecciona y introducirla en la carpeta imagenes, luego crea una
 	# ruta relativa (desde el modulo Formulario hasta la carpeta imagenes hasta la imagen ejemp: imagenes/archivo.png)
+	# si la imagen seleccionada no es del tipo PNG esta se convertira a ese formato para que tkinter pueda mostrarla
+	# la imagen se redimencionara a 500 x 500 sea o no sea PNG
 	def buscar_mover(self):
-		nombrearch=fd.askopenfilename(initialdir = "/",title = "Seleccione archivo",filetypes = (("archivos png", "*.png"),("todos los archivos","*.*")))
+		nombrearch=fd.askopenfilename(
+			initialdir = "/", 
+			title = "Seleccione archivo",
+			filetypes = (("archivos png", "*.png"), ("archivos jpg", "*.jpg"),("todos los archivos","*.*"))
+			)
 		if nombrearch != "":
-			copy(nombrearch, r"imagenes/")
-			self.ruta.set("imagenes/" + os.path.basename(nombrearch))
+			size = (500, 500)
+			ruta = "imagenes/" + os.path.basename(nombrearch)
+			img = Image.open(nombrearch)
+			img2 = img.resize(size)
+			nombre, ext = os.path.splitext(ruta)
+
+			if img.format != "PNG":
+				copy(nombrearch, "imagenes/")
+				img2.save(nombre + ".png", "png")
+				os.remove(ruta)
+				self.ruta.set(nombre +".png")
+
+			else:
+				copy(nombrearch, "imagenes/")
+				img2.save(nombre +"RSZ.png", "png")
+				os.remove(ruta)
+				self.ruta.set(nombre +"RSZ.png")
 
 
 	def opciones(self):
@@ -203,17 +233,18 @@ y luego introduzca los nuevos datos que quiere que posea el pokemon.\n\
 			self.ruta.get(),
 			self.texto.get(1.0, tk.END)
 			)
-		self.database.subir(datos)
-		mb.showinfo("Informacion", "Los datos del pokemon fueron guardados!")
-		self.numero.set("")
-		self.pokemon.set("")
-		self.nombre.set("")
-		self.altura.set("")
-		self.peso.set("")
-		self.tipos.set("")
-		self.comida.set("")
-		self.ruta.set("")
-		self.texto.delete(1.0, tk.END)
+		respuesta = self.database.subir(datos)
+		if respuesta != None:
+			mb.showinfo("Informacion", "Los datos del pokemon fueron guardados!")
+			self.numero.set("")
+			self.pokemon.set("")
+			self.nombre.set("")
+			self.altura.set("")
+			self.peso.set("")
+			self.tipos.set("")
+			self.comida.set("")
+			self.ruta.set("")
+			self.texto.delete(1.0, tk.END)
 
 	# en modificar, se crea una tupla de datos, pero esta es ordenada de manera que 
 	# cuando esta llegue ala base de datos se pueda identificar la informacion del pokemon

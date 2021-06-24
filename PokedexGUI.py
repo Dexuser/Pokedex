@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import scrolledtext as st
 from tkinter import messagebox as mb
-from os import mkdir, remove
+from os import remove
 import Pokedex_styles
 import Formulario
 import Database
@@ -15,16 +15,13 @@ class Pokedex:
 	# los widgets que mas tarde seran incializados, Formulario con este modulo se crea un objeto
 	# que nos permitira hacer un toplevel con las herramientas necesarias para poder introducir informacion	
 	# ala base de datos, y el modulo Database, con el creamos un objeto que nos permite interactuar con una base
-	# de datos SQLite
+	# de datos SQLite de paso se importan las funcionalidads mkdir y remove para crear una carpeta y eliminar
+	# un archivo respectivamente
 
 	# Se creara una carpeta para contener las imagenes
 	# aparte se crean la ventana, y se crean los Objetos para interactuar
 	# con la base de datos y el formulario
 	def __init__(self):
-		try:
-			mkdir("imagenes")
-		except OSError:
-			pass
 
 		self.root = tk.Tk()
 		self.root.geometry("1400x650")
@@ -60,7 +57,7 @@ class Pokedex:
 
 		self.avanzar = ttk.Button(
 			self.root, 
-			text="Avanzar", 
+			text="Avanzar",
 			command=lambda: self.moverse(1)
 		)
 		self.avanzar.grid(column=2, row=0, padx=5, pady=5, sticky="ens")
@@ -108,7 +105,6 @@ class Pokedex:
 		self.numero = tk.StringVar()
 		self.numero_entry= ttk.Entry(
 			self.informacion,
-			state="readonly",
 			textvariable=self.numero
 			)
 		self.numero_entry.grid(column=2, row=0, padx=5, pady=5, sticky="n")
@@ -210,8 +206,16 @@ class Pokedex:
 			)
 		self.texto = st.ScrolledText(self.labelframe, width=60, height=6)
 		self.texto.grid(column=0, row=0, padx=5, pady=5, sticky="we")
-	
 
+		self.boton = ttk.Button(
+			self.informacion, 
+			text="Buscar por numero",
+			command=self.buscar
+			)
+		self.boton.grid(
+			column=2, row=5,
+			padx=5, pady=5,
+			columnspan=2, sticky="we")
 	# la funcion encuesta es llamada por el boton de Agregar/modificar
 	# pokemones, se crea un toplevel para la entrada y modificacion de datos
 	def encuesta(self):
@@ -258,9 +262,26 @@ class Pokedex:
 		else:
 			mb.showerror("Error!", "No hay nada que borrar")
 	
+	def buscar(self):
+		respuesta = self.database.buscar(self.numero.get())
+		if respuesta != None:
+			self.pokemon.set(respuesta[0])
+			self.nombre.set(respuesta[1])
+			self.altura.set(respuesta[2])
+			self.peso.set(respuesta[3])
+			self.tipos.set(respuesta[4])
+			self.comida.set(respuesta[5])
+			self.archivo.configure(file=respuesta[6])
+			self.texto.delete(1.0, tk.END)
+			self.texto.insert(tk.END, respuesta[7])
+		else:
+			mb.showerror("Error!", "No existe ningun pokemon con ese numero")
+
 	def atajos(self, event):
 		if event.keysym=="n":
 			self.encuesta()
 		if event.keysym=="d":
 			self.borrar()
+	
+
 aplicacion = Pokedex()
